@@ -97,6 +97,7 @@ where
                 accept,
             } => {
                 trace!(kind = "simple", path = ?req.uri().path(), ?encoding, ?accept);
+                println!("GOT WEB REQUEST: {}", req.uri().to_string());
 
                 ResponseFuture {
                     case: Case::GrpcWeb {
@@ -110,6 +111,8 @@ where
             // content-types, but the request method is not `POST`.
             // This is not a valid grpc-web request, return HTTP 405.
             RequestKind::GrpcWeb { .. } => {
+                println!("GOT STANDARD GRPC REQUEST: {}", req.uri().to_string());
+
                 debug!(kind = "simple", error="method not allowed", method = ?req.method());
                 self.response(StatusCode::METHOD_NOT_ALLOWED)
             }
@@ -118,6 +121,9 @@ where
             // whatever they are.
             RequestKind::Other(Version::HTTP_2) => {
                 debug!(kind = "other h2", content_type = ?req.headers().get(header::CONTENT_TYPE));
+
+                println!("GOT NON-GRPC REQUEST: {}", req.uri().to_string());
+
                 ResponseFuture {
                     case: Case::Other {
                         future: self.inner.call(req),
@@ -225,6 +231,10 @@ fn coerce_response(res: Response<BoxBody>, encoding: Encoding) -> Response<BoxBo
         .map(|b| GrpcWebCall::response(b, encoding))
         .map(BoxBody::new);
 
+    let content_type = encoding.to_content_type();
+
+    println!("Coercing response for grpc web request. Content type being added: {}.", content_type);
+    
     res.headers_mut().insert(
         header::CONTENT_TYPE,
         HeaderValue::from_static(encoding.to_content_type()),
