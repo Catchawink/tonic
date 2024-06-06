@@ -96,10 +96,8 @@ where
                 encoding,
                 accept,
             } => {
-                println!("GOT WEB GRPC POST REQUEST: {}", req.uri().to_string());
-
                 trace!(kind = "simple", path = ?req.uri().path(), ?encoding, ?accept);
-                
+
                 ResponseFuture {
                     case: Case::GrpcWeb {
                         future: self.inner.call(coerce_request(req, encoding)),
@@ -112,18 +110,13 @@ where
             // content-types, but the request method is not `POST`.
             // This is not a valid grpc-web request, return HTTP 405.
             RequestKind::GrpcWeb { .. } => {
-                println!("GOT WEB GRPC NON-POST REQUEST: {}", req.uri().to_string());
-
                 debug!(kind = "simple", error="method not allowed", method = ?req.method());
-                
                 self.response(StatusCode::METHOD_NOT_ALLOWED)
             }
 
             // All http/2 requests that are not grpc-web are passed through to the inner service,
             // whatever they are.
             RequestKind::Other(Version::HTTP_2) => {
-                println!("GOT HTTP 2 REQUEST: {}", req.uri().to_string());
-
                 debug!(kind = "other h2", content_type = ?req.headers().get(header::CONTENT_TYPE));
                 ResponseFuture {
                     case: Case::Other {
@@ -134,8 +127,6 @@ where
 
             // Return HTTP 400 for all other requests.
             RequestKind::Other(_) => {
-                println!("GOT OTHER REQUEST: {}", req.uri().to_string());
-
                 debug!(kind = "other h1", content_type = ?req.headers().get(header::CONTENT_TYPE));
                 self.response(StatusCode::BAD_REQUEST)
             }
